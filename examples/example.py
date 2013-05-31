@@ -1,3 +1,9 @@
+import os
+import sys
+
+API_ROOT = os.path.realpath(os.path.join(__file__, "..", "..", "api", "python"))
+sys.path.append(API_ROOT)
+
 from DriveDOORS import DOORS
 import types
 
