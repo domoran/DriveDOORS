@@ -1,0 +1,81 @@
+print "\nLaunched DXL Server...\n"
+
+
+IPC s
+
+startDXLTracing_ "C:\\temp\\trace.txt"
+
+Regexp reProgramEndMarker  = regexp2 "//[ ]*END_OF_PROGRAM.*"
+Regexp reTerminateMarker = regexp2 "//[ ]*TERMINATE_SERVER.*"
+
+bool bRun = true
+Buffer bufReceivedData = null
+Buffer bufProgram      = null
+
+void runProgram (Buffer &bufProgram) {
+	Buffer temp         = null
+	
+  	// check if the program is complete 
+  	while (reProgramEndMarker bufProgram) {
+  		
+  		// Cut the program at the end marker ...
+  		int iEnd = end 0
+  		temp = create()
+  		temp += "\n{"
+  		combine(temp, bufProgram, 0, iEnd)
+  		temp += "\n}\n"
+  		
+  		// evaluate it
+  		print "Evaluating " "|" temp "|" "\n"	  		
+  		string sErr = eval_ tempStringOf temp
+  		print sErr  	  		
+  		delete temp; 
+  		
+  		// Assign the rest of the program to bufProgram
+  		temp = bufProgram[iEnd+1:]
+  		delete bufProgram;
+  		bufProgram = temp 
+  	}	
+}
+
+while (bRun) {
+	s = server(2030)
+	accept s
+	
+	bufProgram      = create() 
+	
+	bool bReceivedData = true
+	
+	while (bReceivedData && bRun) {
+	  bufReceivedData = create()
+	  bReceivedData = recv(s, bufReceivedData, 0)
+	  // convertFromCodepage(850, bufReceivedData)
+	  
+	  if (bReceivedData && !null bufReceivedData) {
+		  print "Received: " bufReceivedData "\n"
+	  	// append the input to the program buffer
+	  	combine(bufProgram, bufReceivedData, 0) 
+  		delete bufReceivedData; bufReceivedData = null
+	  	
+	  	// Check for termination marker
+	  	if (reTerminateMarker bufProgram) {
+	  		bRun = false
+	  		print "Terminate Marker detected. Shutting down.\n"
+	  	}
+	  		  	
+		runProgram bufProgram 
+	  } else {
+	  	print "Connection dropped by client ...\n"
+	  	// Connection was closed bReceivedData = false 
+	  	runProgram bufProgram
+	  	
+	  	delete bufProgram     ; bufProgram      = null
+	  	delete bufReceivedData; bufReceivedData = null	 
+	  	bReceivedData = false // do not loop again ... 	
+	  }
+	}
+	
+	delete s	
+}
+
+
