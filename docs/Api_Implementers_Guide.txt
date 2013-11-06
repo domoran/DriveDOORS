@@ -1,0 +1,89 @@
+INTRODUCTION
+------------
+
+This document is dedicated to programmers that want to understand DriveDOORS architecture or implement a new 
+language API for the DriveDOORS backend.
+
+ARCHITECTURE
+------------
+
+DriveDOORS consists of four components: 
+
++----------+         +--------+        +-------------+
+| FrontEnd |   --->  | Caller |   ---> | DXL Scripts |
++----------+         +--------+        +-------------+
+
+FrontEnd   : The front-end is any language that needs an interface to DOORS. This can be DXL itself (yes it can
+             be of use to launch DXL scripts from DXL, e.g. over a network or to parallel processes, batch scripts, etc) or
+             it can be any other language like Python, Java, .NET. 
+
+DXL Scripts: The Backend is the DXL scripts that need to be executed. DriveDOORS provides a standard API für the DXL scripts to
+             receive parameters, send progress and provide results to the calling DXL scripts. 
+            
+Caller     : The caller is the glue between the FrontEnd end the Backend. Since the DXL script in the backend can be located on 
+             another physical machine, DriveDOORS provides a DXL Server that can take requests from a remote computer. But other
+             Caller components can be thought of. A load balancing component can be implemented, that is able to take multiple
+             parallel requests and execute several DXL scripts in parallel. Also for testing the provided Servlets a DXL API will
+             be implemented, that allows the user to run their DXL scripts from an interactive session, so that development can 
+             be done easily. 
+             
+This guide focuses on the guidelines for implementing the frontends, e.g. a Java API and Caller Components (e.g. a COM runner)
+
+FrontEnd - Network Protocol
+---------------------------
+
+The front-end should implement a DriveDOORSServerConnection class, that is able to connect to a DriveDOORS Network Server instance. 
+The network connection is made over a simple TCP socket. The DriveDOORSServer has to connect to the server process, then a simple 
+"handshake" has to be executed: 
+
+*** Handshake Protocol - Connecting to the Drive DOORS Server ***
+Client connects to server (TCP Handshake is done)
+Client sends   : 'DXLURDY?' (8 Bytes)
+Server responds: 'YAIMRDY!' (8 Bytes)
+
+When this handshake is not sent, the DXL Server has to close the connection and accept connections again. If the connection is closed
+by the client, then the client has to wait 100ms before initiating another connection to the DriveDOORS Server. This is to make sure, 
+the DXL has enough time to go back to accepting new connections.
+
+*** Characer Encoding - Binary Data - Null Characters *** 
+
+All strings sent over the wire must be UTF-8 encoded. Since DXL has a general problem with chr(0) null characters in strings there must not be a 0x00 Byte sent over the network connection. 
+This will make the DXL program receive only the part before the first 0x00 Byte. The rest will be clipped by the string processing of 
+the DOORS API, which treats all strings as 0-terminated. 
+
+XXX,TODO: FIND SOLUTION - CHECK IF bytes ARE CHANGED FROM INTERNAL STRING HANDLING 
+Possibility: 
+------------
+To transmit binary data over the wire, we exploit the fact that DOORS supports UTF-8. We choose UTF-8 character 0x100 (LATIN CAPITAL 
+LETTER A WITH MACRON ==> Ā) as a replacement for the null character. These characters can later be replaced by a regular expression search to
+get the binary bytes back. Note that this only applies to binary data (e.g. zip file content, or similar). Normal strings are 
+transmitted
+------------  
+
+*** Blocking Connections, byte protocol *** 
+
+Since DXL does not feature 
+
+
+
+*** DXL Server API ***
+
+Once connected the DXL Server, the client can execute the following functions: 
+
+Run any custom DXL script and get output   
+-------------------------------------------
+The Protocol for this function is:
+ 
+Client sends: // BEGIN DXL PROGRAM 
+Client sends: DXL Code
+Client sends: // END DXL PROGRAM
+Server Sends: 'OKAY' (4 Bytes) or 'FAIL' (4 Bytes)
+
+Note that the DXL Code must not contain the string '// END DXL PROGRAM'  
+
+
+ 
+Run a Scriptlet with parameters (not yet implemented) and get results 
+---------------------------------------------------------------------
+ 
+
