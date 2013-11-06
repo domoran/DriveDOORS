@@ -1,6 +1,11 @@
 @echo off
 
-FOR /F "delims=;" %%i in ("%0") do SET DRIVEDOORSROOT=%%~dpi..
+REM Locate the DriveDOORS Root Directory
+pushd
+FOR /F "delims=; tokens=*" %%I in ("%0") DO CD /D "%%~dpI"
+:searchRoot 
+if exist README.md (set DRIVEDOORSROOT=%CD%) else (cd .. & goto :searchRoot)
+popd
 
 SET CONF_FILE=%DRIVEDOORSROOT%\config\doors_settings.cfg
 
@@ -18,6 +23,7 @@ IF "%1"=="" (
    pause
    goto :eof
 )
+
 call :findParameterInConfig global. doors
 set DOORS=%VALUE%
 
@@ -34,7 +40,8 @@ call :findParameterInConfig "%1." pass
 set PASS=%VALUE: =%
 
 ECHO Running DXL Server on %PORT%@%HOST%
-start "DOORS" "%DOORS%" -d %PORT%@%HOST% -W -b "%DRIVEDOORSROOT%\runner\DxlServer.dxl" -u %USER% -P %PASS%
+ECHO Command: "%DOORS%" -J "#include <%DRIVEDOORSROOT%/lib/dxl/DriveDOORS.inc>" -d %PORT%@%HOST% -W %2 %3 %4 %5 %6 %7 %8 -u %USER% -P %PASS%
+start "DOORS" "%DOORS%" -J "#include <%DRIVEDOORSROOT%/lib/dxl/DriveDOORS.inc>" -d %PORT%@%HOST% -W %2 %3 %4 %5 %6 %7 %8 -u %USER% -P %PASS%
 
 SET VALUE=
 SET DOORS=

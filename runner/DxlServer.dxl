@@ -1,5 +1,6 @@
-print "\nLaunched DXL Server...\n"
+#include <DriveDOORS.inc>
 
+print "OK\nLaunched DXL Server...\n"
 
 IPC s
 
@@ -38,14 +39,32 @@ void runProgram (Buffer &bufProgram) {
   	}	
 }
 
+noError()
+int iServerPort = intOf realOf eval_ "noError(); return SERVERPORT \"\"";
+lastError();
+if (iServerPort == 0) iServerPort = 2030;  
+
 while (bRun) {
-	s = server(2030)
-	accept s
+    // get the server port if it has been defined by a global variable
+    // else use 2030 as default port 
+
+    print "Waiting for connection!\n"
+    
+	s = server(iServerPort)
+	while (true) {
+	    if (!accept s) continue
+        string sHandshake = ""; 
+        bool bGotData = recv (s, sHandshake, 10)
+        if (!bGotData || sHandshake != "DXLURDY?") continue
+        print "Got challenge, sending answer: "
+        print send(s, "YAMERDY!")
+        break 
+	} // wait for a connection
 	
 	bufProgram      = create() 
-	
+
+    // Connection handling loop, receive data as long as the other program sends	
 	bool bReceivedData = true
-	
 	while (bReceivedData && bRun) {
 	  bufReceivedData = create()
 	  bReceivedData = recv(s, bufReceivedData, 0)
