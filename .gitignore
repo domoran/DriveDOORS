@@ -1,3 +1,6 @@
 .pyc
 tools/pypy
 tools/pypy-1.9-win32
+api/dxl
+__pycache__/
+tools/
